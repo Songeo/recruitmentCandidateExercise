@@ -132,10 +132,11 @@ grid.arrange(gg.1, gg.2, gg.3, ncol = 1)
 
 # MODELS ----
 
-# model 1 ----
+# Model 1 ----
 tbl_mod <- tbl_adstock %>% 
   mutate(lag = lag(media_spend_usd))
 
+# model 1 function ----
 fun_model_lm <- 
   function(tbl_mod){
     # Input: 
@@ -145,7 +146,7 @@ fun_model_lm <-
     #   * mod: model
     #   * tab_eff: model coeficients and intervals
     #   * tab_fit: model fit 
-    mod <- lm(formula = "search_volume ~ adstock + media_campaign ", 
+    mod <- lm(formula = "search_volume ~ -1 + adstock + media_campaign ", 
               data = tbl_mod)
     mod %>% glance
     mod %>% summary()
@@ -157,22 +158,47 @@ fun_model_lm <-
                   augment %>% 
                   mutate(date_week_fmt = tbl_mod$date_week_fmt) %>% 
                   dplyr::select(date_week_fmt, .fitted, .resid), 
-                by = "date_week_fmt" )
+                by = "date_week_fmt" ) %>% 
+      dplyr::select(date_week_fmt, observed = search_volume, fitted = .fitted) %>% 
+      gather(Type, value, -date_week_fmt) 
     
     return(list(mod = mod, 
                 tab_eff = tab_eff, 
                 tab_fit = tab_fit))  
   }
-
 mod_list_1 <- fun_model_lm(tbl_adstock)
+mod_list_1$mod %>% glance
+mod_list_1$tab_eff
 
+
+# chart fit ----
 mod_list_1$tab_fit %>% 
-  ggplot(aes(x = date_week_fmt, y = search_volume)) + 
-  geom_line(color = 'gray', alpha = .8) + 
-  geom_line(aes(y = .fitted), color = "salmon") 
+  ggplot(aes(x = date_week_fmt, 
+             y = value, 
+             color = Type)) + 
+  geom_line() + 
+  scale_color_manual(values = c('salmon', 'gray70')) + 
+  ylab('Search Volume') + 
+  xlab('Date (Week)') + 
+  ggtitle("Fitted vs Observed Search Volume", 
+         paste("Model:", as.character(mod_list_1$mod$call)[2]) )
+
+
+# campaign efficiencies ----
+td <- tidy(mod_list_1$mod, conf.int = TRUE)
+td %>% 
+  filter(str_detect(term, "media")) %>% 
+  ggplot(aes(estimate, term, color = term)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high)) +
+  geom_vline(xintercept = 0, color = 'gray70')
+
+
 
 
 # model 2 ----
+
+# model 2 function ----
 fun_model_lmer <- 
   function(tbl_mod){
     # Input: 
