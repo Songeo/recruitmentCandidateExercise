@@ -1,14 +1,14 @@
 
 
 
-
+# REQUIREMENTS ----
 # libraries requierements ----
 sapply(c(# manupulation & transformation libraries
          'here', 'tidyverse', 'lubridate',
          # plotting extras 
          'gridExtra',
          # modeling libraries
-         'arm', 'forecast', 'sweep', 
+         'arm', 'forecast', 'broom', 
          # shiny libraries
          'shiny'), 
        function(pkg){
@@ -33,6 +33,8 @@ theme_set(theme_bw(base_size = 14))
 setwd(here::here())
 getwd()
 
+
+# DATA ----
 # reading data ----
 tbl_data <- 
   read_csv("data.csv") %>% 
@@ -47,46 +49,46 @@ tbl_data <-
   # date_week to date type 
   mutate(date_week_fmt = dmy(date_week))
 
-# eda ----
+# EDA ----
 tbl_data %>% dim() # 144 x 5
 tbl_data %>% summary() # jan 2014 to oct 2016
 
 # The advertising has specifically intended to increase in Search volumes and over time three different (non-overlapping) advertising campaigns have been used.
 
+# searh volume ----
 gg.1 <- 
   tbl_data %>% 
   ggplot(aes(x = date_week_fmt, 
              y = search_volume)) + 
   geom_line(color = 'gray80') + 
   geom_point(aes(color = factor(media_campaign))) + 
-  ylab('Search Volume') + 
+  ylab('\nSearch Volume') + 
   xlab('Date (Week)') + 
   guides(color = guide_legend("Media\nCampaign"))
 
+# media spend ----
 gg.2 <- 
   tbl_data %>% 
   ggplot(aes(x = date_week_fmt, 
              y = media_spend_usd)) + 
   geom_line(color = 'gray80') + 
   geom_point(aes(color = factor(media_campaign))) + 
-  ylab('Media Spend (USD)') + 
+  ylab('\nMedia Spend (USD)') + 
   xlab('Date (Week)') + 
   guides(color = guide_legend("Media\nCampaign"))
 
-grid.arrange(gg.1, gg.2, ncol = 1)
+# grid.arrange(gg.1, gg.2, ncol = 1)
 
 
-# adstock ----
-
+# ADSTOCK ----
 
 # (filter) Applies linear filtering to a univariate time series or to each series separately of a multivariate time series
 # x: a univariate or multivariate time series.
 # filter: a vector of filter coefficients in reverse time order (as for AR or MA coefficients).
 # method: Either "convolution" or "recursive" (and can be abbreviated). If "convolution" a moving average is used: if "recursive" an autoregression is used.
 
-fct_rf <- .5
 
-# adstock function
+# adstock function ----
 fun_adstock_calc <- 
   function(spend, rf){
     # adstock (i) = Spend (i) + [ rf x Adstock (i-1) ]
@@ -96,13 +98,106 @@ fun_adstock_calc <-
     # Output:
     # - adstock: adstock measure
     
-    adstock <- stats::filter(spend, rf, method = 'recursive')
+    adstock <- stats::filter(spend, rf, method = 'recursive') %>% 
+      as.numeric()
     return(adstock)
 }
 
+# adstock (reactive)  ----
 
-fun_adstock_calc(tbl_searches$media_spend_usd[1:10], fct_rf)
+# input variable shiny
+fct_rf <- .5 
+tbl_adstock <- 
+  tbl_data %>% 
+  mutate_at('media_campaign', factor) %>% 
+  arrange(date_week_fmt) %>% 
+  group_by(media_campaign) %>% 
+  mutate(adstock = fun_adstock_calc(media_spend_usd, fct_rf)) %>% 
+  ungroup()
+
+gg.3 <- 
+  tbl_adstock %>% 
+  ggplot(aes(x = date_week_fmt, 
+             y = adstock)) + 
+  geom_line(aes(color = factor(media_campaign)) ) + 
+  geom_line(aes(y = media_spend_usd), color = 'gray80' ) +
+  ylab('Adstock\nMedia Spend (USD)') + 
+  xlab('Date (Week)') + 
+  guides(color = guide_legend("Media\nCampaign"))
+gg.3
+
+grid.arrange(gg.1, gg.2, gg.3, ncol = 1)
 
 
 
+# MODELS ----
 
+# model 1 ----
+tbl_mod <- tbl_adstock %>% 
+  mutate(lag = lag(media_spend_usd))
+
+fun_model_lm <- 
+  function(tbl_mod){
+    # Input: 
+    # - tbl_mod: data
+    # Output: 
+    # - list of elements: 
+    #   * mod: model
+    #   * tab_eff: model coeficients and intervals
+    #   * tab_fit: model fit 
+    mod <- lm(formula = "search_volume ~ adstock + media_campaign ", 
+              data = tbl_mod)
+    mod %>% glance
+    mod %>% summary()
+    
+    tab_eff <- mod %>% tidy()
+    
+    tab_fit <- tbl_mod %>% 
+      left_join(mod %>% 
+                  augment %>% 
+                  mutate(date_week_fmt = tbl_mod$date_week_fmt) %>% 
+                  dplyr::select(date_week_fmt, .fitted, .resid), 
+                by = "date_week_fmt" )
+    
+    return(list(mod = mod, 
+                tab_eff = tab_eff, 
+                tab_fit = tab_fit))  
+  }
+
+mod_list_1 <- fun_model_lm(tbl_adstock)
+
+mod_list_1$tab_fit %>% 
+  ggplot(aes(x = date_week_fmt, y = search_volume)) + 
+  geom_line(color = 'gray', alpha = .8) + 
+  geom_line(aes(y = .fitted), color = "salmon") 
+
+
+# model 2 ----
+fun_model_lmer <- 
+  function(tbl_mod){
+    # Input: 
+    # - tbl_mod: data
+    # Output: 
+    # - list of elements: 
+    #   * mod: model
+    #   * tab_eff: model coeficients and intervals
+    #   * tab_fit: model fit 
+    mod <- lm(formula = "media_spend_usd ~ adstock ", 
+              data = tbl_mod)
+    mod %>% glance
+    mod %>% summary()
+    
+    tab_fit <- 
+    return(mod)  
+    }
+
+mod_1 <- 
+  tbl_adstock %>% 
+  mutate(lag = lag(media_spend_usd)) %>% 
+  fun_model_lm
+
+mod_1 %>% tidy()
+mod_1 %>% summary()
+
+
+coef(mod_1)
