@@ -10,6 +10,7 @@
 
 library(shiny)
 library(rmarkdown)
+library(DT)
 
 # Define UI for application that draws a histogram
 shinyUI(fluidPage(

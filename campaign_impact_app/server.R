@@ -9,7 +9,8 @@
 
 library(shiny)
 
-source("app.R")
+source("structure.R")
+source("helper.R")
 
 
 # Define server logic required to draw a histogram
@@ -131,4 +132,3 @@ shinyServer(function(input, output) {
 
 })
 
-        gg.3
