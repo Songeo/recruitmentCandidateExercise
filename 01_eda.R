@@ -134,9 +134,9 @@ grid.arrange(gg.1, gg.2, gg.3, ncol = 1)
 
 # Model 1 ----
 tbl_mod <- tbl_adstock %>% 
-  mutate(lag = lag(media_spend_usd))
+  mutate(lag = lag(search_volume))
 
-# model 1 function ----
+# (fun) model 1 ----
 fun_model_lm <- 
   function(tbl_mod){
     # Input: 
@@ -146,7 +146,7 @@ fun_model_lm <-
     #   * mod: model
     #   * tab_eff: model coeficients and intervals
     #   * tab_fit: model fit 
-    mod <- lm(formula = "search_volume ~ -1 + adstock + media_campaign ", 
+    mod <- lm(formula = "search_volume ~ adstock + media_campaign ", 
               data = tbl_mod)
     mod %>% glance
     mod %>% summary()
@@ -157,8 +157,8 @@ fun_model_lm <-
       left_join(mod %>% 
                   augment %>% 
                   mutate(date_week_fmt = tbl_mod$date_week_fmt) %>% 
-                  dplyr::select(date_week_fmt, .fitted, .resid), 
-                by = "date_week_fmt" ) %>% 
+                  dplyr::select(date_week_fmt, search_volume, adstock, .fitted, .resid),
+                by = c("search_volume", "date_week_fmt", "adstock")) %>% 
       dplyr::select(date_week_fmt, observed = search_volume, fitted = .fitted) %>% 
       gather(Type, value, -date_week_fmt) 
     
@@ -166,40 +166,68 @@ fun_model_lm <-
                 tab_eff = tab_eff, 
                 tab_fit = tab_fit))  
   }
+
+# (fun) gg chart fit ----
+fun_gg_chart_fit <- 
+  function(mod_list){
+    # chart fit
+    gg.1 <- mod_list$tab_fit %>% 
+      ggplot(aes(x = date_week_fmt, 
+                 y = value, 
+                 color = Type)) + 
+      geom_line() + 
+      scale_color_manual(values = c('salmon', 'gray70')) + 
+      ylab('Search Volume') + 
+      xlab('Date (Week)') + 
+      ggtitle("Fitted vs Observed Search Volume", 
+              paste("Model:", as.character(mod_list$mod$call)[2]) )
+    
+    return(gg.1)
+  }
+
+# (fun) function table efficiencies ----
+fun_tab_camp_eff <- 
+  function(mod_list){
+    # chart fit
+    td <- 
+      tibble(term = paste0("media_campaign", 
+                        mod_list$mod$xlevels$media_campaign), 
+             beta_0 = tidy(mod_list$mod) %>% 
+               filter(term == '(Intercept)') %>% 
+               .$estimate) %>% 
+      left_join(tidy(mod_list$mod), 
+                by = "term") %>% 
+      mutate(efficiency = beta_0 + tidyr::replace_na(estimate, 0))
+    
+    tab_td <- 
+      td %>% 
+      mutate(term = str_replace_all(term, 'media_', '')) %>% 
+      dplyr::select(term, efficiency) %>% 
+      mutate_if(is.numeric, round, digits = 1) %>% 
+      arrange(desc(efficiency))
+    
+    return(tab_td)
+  }
+
+# model ----
 mod_list_1 <- fun_model_lm(tbl_adstock)
 mod_list_1$mod %>% glance
 mod_list_1$tab_eff
 
-
 # chart fit ----
-mod_list_1$tab_fit %>% 
-  ggplot(aes(x = date_week_fmt, 
-             y = value, 
-             color = Type)) + 
-  geom_line() + 
-  scale_color_manual(values = c('salmon', 'gray70')) + 
-  ylab('Search Volume') + 
-  xlab('Date (Week)') + 
-  ggtitle("Fitted vs Observed Search Volume", 
-         paste("Model:", as.character(mod_list_1$mod$call)[2]) )
-
+fun_gg_chart_fit(mod_list_1)
 
 # campaign efficiencies ----
-td <- tidy(mod_list_1$mod, conf.int = TRUE)
-td %>% 
-  filter(str_detect(term, "media")) %>% 
-  ggplot(aes(estimate, term, color = term)) +
-  geom_point() +
-  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high)) +
-  geom_vline(xintercept = 0, color = 'gray70')
+fun_tab_camp_eff(mod_list_1)
+
 
 
 
 
 # model 2 ----
 
-# model 2 function ----
-fun_model_lmer <- 
+# (fun) model 2 function ----
+fun_model_bayes <- 
   function(tbl_mod){
     # Input: 
     # - tbl_mod: data
@@ -208,22 +236,35 @@ fun_model_lmer <-
     #   * mod: model
     #   * tab_eff: model coeficients and intervals
     #   * tab_fit: model fit 
-    mod <- lm(formula = "media_spend_usd ~ adstock ", 
+    mod <- bayesglm(formula = "search_volume ~ adstock + media_campaign ", 
               data = tbl_mod)
     mod %>% glance
     mod %>% summary()
     
-    tab_fit <- 
-    return(mod)  
+    tab_eff <- mod %>% tidy()
+    
+    tab_fit <- tbl_mod %>% 
+      left_join(mod %>% 
+                  augment %>% 
+                  mutate(date_week_fmt = tbl_mod$date_week_fmt) %>% 
+                  dplyr::select(date_week_fmt, search_volume, adstock, .fitted, .resid),
+                by = c("search_volume", "date_week_fmt", "adstock")) %>% 
+      dplyr::select(date_week_fmt, observed = search_volume, fitted = .fitted) %>% 
+      gather(Type, value, -date_week_fmt) 
+    
+    return(list(mod = mod, 
+                tab_eff = tab_eff, 
+                tab_fit = tab_fit))  
     }
 
-mod_1 <- 
-  tbl_adstock %>% 
-  mutate(lag = lag(media_spend_usd)) %>% 
-  fun_model_lm
 
-mod_1 %>% tidy()
-mod_1 %>% summary()
+# model ----
+mod_list2 <- fun_model_bayes(tbl_adstock)
+mod_list2$mod %>% glance
+mod_list2$tab_eff
 
+# chart fit ----
+fun_gg_chart_fit(mod_list_2)
 
-coef(mod_1)
+# campaign efficiencies ----
+fun_tab_camp_eff(mod_list_2)
