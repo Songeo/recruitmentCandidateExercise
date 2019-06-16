@@ -25,11 +25,10 @@ shinyUI(fluidPage(
     
     # Sidebar
     sidebarPanel(width = 4,
-        h4('Retention factor'),
-        helpText("Select a retention factor for the adstock function"),
-        sliderInput("rf_slider", "Retention Factor:", 
+        h4('Retention factor slider'),
+        helpText("Select a retention factor, from a range from 0 to 1, for the ad-stock function."),
+        sliderInput("rf_slider", "Retention factor:", 
                     min = 0, max = 1, value = .8, step = .1)
-        # actionButton("action", "Run Model", class = "btn-primary")
         ), # sidebar Panel
     
     # Main panel with tabset
@@ -38,8 +37,8 @@ shinyUI(fluidPage(
             # EDA
             tabPanel("EDA", 
                      h3("Exploratory analysis"),
-                     "Quick plots of observed data and adstock transformation", 
                      br(),
+                     textOutput("tx_summ"),
                      br(),
                      plotOutput('gg_eda', width = "650px", height = "650px")),
             
@@ -47,29 +46,39 @@ shinyUI(fluidPage(
             tabPanel("Approach A", 
                      h3('Frequentist Approach'),
                      br(),
-                     helpText(paste0('$$Search\\;Volume_{t} = \\beta_{0} + ',
-                                     '\\beta_1 * Adstock_{t} + ',
-                                     '\\sum_{i=1}^3 \\beta_{2,i}*campaign_i$$')),
+                     helpText(paste0('Linear model using function lm( ). Model ',
+                                     '$$Search\\;Volume_{t} = \\beta_{0} + ',
+                                     '\\beta_1 \\cdot Adstock_{t} + ',
+                                     '\\sum_{i=1}^3 \\beta_{2,i} \\cdot campaign_i$$')),
                      wellPanel(h4('Fitted values'),
+                               "The following figure presents the observed values (black) and fitted values (red).",
                                plotOutput('gg_mod1_fit', width = "700px", height = "300px")),
                      br(),
                      wellPanel(h4('Campaign efficiencies'),
+                               "The table presents presents the efficiency or impact in search volume of each campaign in descending order.",
                                dataTableOutput('tab_mod1_camp', width = "400px")),
                      br()
                      ),
             
             # Modelo B
             tabPanel("Approach B", 
-                     h3('Bayesian Autoregressive Approach'),
+                     h3('Bayesian Approach'),
                      br(),
-                     helpText(paste0('$$Search\\;Volume_{t} = \\beta_0 + ',
-                                     'Search\\;Volume_{t-1} + \\beta_1 * Adstock_{t} + ',
-                                     '\\sum_{i=1}^3 \\beta_{2,i }*campaign_i$$')),
+                     helpText(paste0('Linear model using function bayesglm( ). Model ',
+                                     '$$Search\\;Volume_{t} = \\beta_0 + ',
+                                     '\\beta_1 \\cdot Adstock_{t} + ',
+                                     '\\sum_{i=1}^3 \\beta_{2,i } \\cdot campaign_i$$')),
                      wellPanel(h4('Fitted values'),
+                               "The following figure presents the observed values (black) and fitted values (red).",
                                plotOutput('gg_mod2_fit', width = "700px", height = "300px")),
                      br(),
                      wellPanel(h4('Campaign efficiencies'),
+                               "The table presents the efficiency or impact in search volume of each campaign in descending order.",
                                dataTableOutput('tab_mod2_camp', width = "400px")),
+                     br(),
+                     wellPanel(h4('Probability interval efficiencies'),
+                               "The bayesian approach allows the creation of coefficient simulations from the posterior distribution. The following figure presents the impact in search volume of each campaign in descending order with intervals of 90% and 50% of probability.",
+                               plotOutput('gg_mod2_sim', width = "400px", height = "200px")),
                      br()
                      ),
             

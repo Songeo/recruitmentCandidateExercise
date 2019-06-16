@@ -3,7 +3,7 @@
 **Exercise for Solutions Analytics Director role**
 
 
-Link to [app](https://songeo.shinyapps.io/campaign_impact_app/)
+Link to [app](https://songeo.shinyapps.io/campaign_impact_app/) with analysis. 
 
 
 ----

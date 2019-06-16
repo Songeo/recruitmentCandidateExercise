@@ -42,7 +42,19 @@ shinyServer(function(input, output) {
     })
     
     
+    
     # App ouput (results and plots) ----
+    
+    output$tx_summ <- renderText({ 
+        tbl_adstock <- TblStock()
+        txt <- paste0("Weekly search volume data from ", min(tbl_adstock$date_week_fmt), 
+                     " to ", max(tbl_adstock$date_week_fmt), 
+                     ", a total of ", n_distinct(tbl_adstock$date_week_fmt), 
+                     " weeks. The following plots show search volume, media spend, ",
+                     "and adstock transformation of media spend time series.")
+        txt
+    })
+    
     output$gg_eda <- renderPlot({
 
         # search volume
@@ -55,7 +67,7 @@ shinyServer(function(input, output) {
             ylab('\nSearch Volume') + 
             xlab('Date (Week)') + 
             guides(color = guide_legend("Media\nCampaign")) + 
-            ggtitle("Time Serie: Search Volume", 
+            ggtitle("Search Volume", 
                     "Searches realized in time by campaign")
         
         # media spend
@@ -68,7 +80,7 @@ shinyServer(function(input, output) {
             ylab('\nMedia Spend (USD)') + 
             xlab('Date (Week)') + 
             guides(color = guide_legend("Media\nCampaign")) + 
-            ggtitle("Time Serie: Media Spend", 
+            ggtitle("Media Spend", 
                     "Advertising spend by campaign")
         
         
@@ -82,7 +94,7 @@ shinyServer(function(input, output) {
             ylab('Adstock\nMedia Spend (USD)') + 
             xlab('Date (Week)') + 
             guides(color = guide_legend("Media\nCampaign")) + 
-            ggtitle("Time Serie: Media Spend Adstock", 
+            ggtitle("Media Spend Adstock", 
                     paste0("Retention factor: ", round(100*(input$rf_slider)), '%'))
         
         
@@ -124,6 +136,35 @@ shinyServer(function(input, output) {
         DT::datatable(td, 
                       rownames = FALSE, 
                       options = list(searching = FALSE, paging = FALSE))
+    })
+    
+    output$gg_mod2_sim <- renderPlot({
+        mod_list <- ResMod2()
+        
+        # campaign efficiencies
+        gg <- sim(mod_list$mod, 500)@coef %>% 
+            as.tibble() %>% 
+            mutate(campaign1 = `(Intercept)`, 
+                   campaign2 = `(Intercept)` + media_campaign2, 
+                   campaign3 = `(Intercept)` + media_campaign3) %>% 
+            dplyr::select(starts_with('campaign')) %>% 
+            rownames_to_column() %>% 
+            gather(campaign, value, -rowname) %>% 
+            group_by(campaign) %>% 
+            summarise(median = median(value), 
+                      q25 = quantile(value, .25),
+                      q75 = quantile(value, .75),
+                      q05 = quantile(value, .05),
+                      q975 = quantile(value, .975)) %>% 
+            ggplot(aes(x = median, y = campaign)) + 
+            geom_errorbarh(aes(xmin = q25, xmax = q75), height = 0, size = 2) +
+            geom_errorbarh(aes(xmin = q05, xmax = q975), height = .1) +
+            geom_point(aes(color = campaign), size = 4) + 
+            theme(legend.position = 'none') + 
+            xlab('Estimate') + 
+            ylab(NULL)
+        
+        gg
     })
     
     
