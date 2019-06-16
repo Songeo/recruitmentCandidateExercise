@@ -10,7 +10,7 @@ sapply(c(# manupulation & transformation libraries
          # modeling libraries
          'arm', 'forecast', 'broom', 
          # shiny libraries
-         'shiny'), 
+         'shiny', 'rmarkdown'), 
        function(pkg){
           res <- require(pkg, character.only = T, quietly = T)
           
