@@ -9,6 +9,7 @@
 
 
 library(shiny)
+library(rmarkdown)
 
 # Define UI for application that draws a histogram
 shinyUI(fluidPage(
@@ -46,7 +47,7 @@ shinyUI(fluidPage(
                      br(),
                      helpText(paste0('$$Search\\;Volume_{t} = \\beta_{0} + ',
                                      '\\beta_1 * Adstock_{t} + ',
-                                     '\\sum_{i=1}^3 \\beta_{t,2,i}*campaign_i$$')),
+                                     '\\sum_{i=1}^3 \\beta_{2,i}*campaign_i$$')),
                      wellPanel(h4('Fitted values'),
                                plotOutput('gg_mod1_fit', width = "700px", height = "300px")),
                      br(),
@@ -60,8 +61,8 @@ shinyUI(fluidPage(
                      h3('Bayesian Autoregressive Approach'),
                      br(),
                      helpText(paste0('$$Search\\;Volume_{t} = \\beta_0 + ',
-                                     'Search\\;Volume_{t-1} + \\beta_1 * Adstock{t} + ',
-                                     '\\sum_{i=1}^3 \\beta_{t,2,i }*campaign_i$$')),
+                                     'Search\\;Volume_{t-1} + \\beta_1 * Adstock_{t} + ',
+                                     '\\sum_{i=1}^3 \\beta_{2,i }*campaign_i$$')),
                      wellPanel(h4('Fitted values'),
                                plotOutput('gg_mod2_fit', width = "700px", height = "300px")),
                      br(),

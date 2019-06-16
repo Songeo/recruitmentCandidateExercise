@@ -19,7 +19,7 @@ fun_adstock_calc <-
 
 
 
-# (fun) model 1 ----
+# (fun) model 1 function ----
 fun_model_lm <- 
   function(tbl_mod){
     # Input: 
