@@ -18,12 +18,13 @@ shinyUI(fluidPage(
     
     # Application title
     titlePanel("Recruitment Candidate Exercise"),
+    h4("Weekly Google search volumes influenced by brand’s advertising spend"),
     br(),
     br(),
     
     # Sidebar
     sidebarPanel(width = 4,
-        h4('Input panel'),
+        h4('Retention factor'),
         helpText("Select a retention factor for the adstock function"),
         sliderInput("rf_slider", "Retention Factor:", 
                     min = 0, max = 1, value = .8, step = .1)
