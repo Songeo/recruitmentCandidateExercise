@@ -1,5 +1,12 @@
 # Recruitment Candidate Exercise
-Exercise for Solutions Analytics Director role
+
+**Exercise for Solutions Analytics Director role**
+
+
+Link to app: (https://songeo.shinyapps.io/campaign_impact_app/)[https://songeo.shinyapps.io/campaign_impact_app/]
+
+
+----
 
 This exercise aims to gain an understanding of how a brand’s advertising spend has influenced the levels of weekly Google Search volumes that were made for the brand in a particular country.
 
