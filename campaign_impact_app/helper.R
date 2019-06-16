@@ -60,8 +60,11 @@ fun_model_bayes <-
     #   * mod: model
     #   * tab_eff: model coeficients and intervals
     #   * tab_fit: model fit 
-    mod <- bayesglm(formula = "search_volume ~ lag + adstock + media_campaign ",
-                    family = 'gaussian',
+    mod <- bayesglm(formula = "search_volume ~ adstock + media_campaign ", 
+                    prior.mean = c(0, 100, 100),
+                    prior.scale = c(10),
+                    prior.mean.for.intercept = 0,
+                    prior.scale.for.intercept = c(1000),
                     data = tbl_mod)
     mod %>% glance
     mod %>% summary()
