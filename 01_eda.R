@@ -53,6 +53,8 @@ tbl_data <-
 tbl_data %>% dim() # 144 x 5
 tbl_data %>% summary() # jan 2014 to oct 2016
 
+tbl_data$date_week
+
 # The advertising has specifically intended to increase in Search volumes and over time three different (non-overlapping) advertising campaigns have been used.
 
 # searh volume ----
@@ -236,9 +238,10 @@ fun_model_bayes <-
     #   * mod: model
     #   * tab_eff: model coeficients and intervals
     #   * tab_fit: model fit 
-    mod <- bayesglm(formula = "search_volume ~ adstock + media_campaign ", 
-              data = tbl_mod)
-    mod %>% glance
+    mod <- arm::bayesglm(formula = "search_volume ~ adstock + media_campaign ", 
+                    prior.mean = c(0, rep(30, 2)),
+                    prior.scale = c(.0005),
+                    data = tbl_mod)
     mod %>% summary()
     
     tab_eff <- mod %>% tidy()
@@ -262,6 +265,30 @@ fun_model_bayes <-
 mod_list2 <- fun_model_bayes(tbl_adstock)
 mod_list2$mod %>% glance
 mod_list2$tab_eff
+
+# simulations
+sim(mod_list2$mod, 500)@coef %>% 
+  as.tibble() %>% 
+  mutate(campaign1 = `(Intercept)`, 
+         campaign2 = `(Intercept)` + media_campaign2, 
+         campaign3 = `(Intercept)` + media_campaign3) %>% 
+  dplyr::select(starts_with('campaign')) %>% 
+  rownames_to_column() %>% 
+  gather(campaign, value, -rowname) %>% 
+  group_by(campaign) %>% 
+  summarise(median = median(value), 
+            q25 = quantile(value, .25),
+            q75 = quantile(value, .75),
+            q05 = quantile(value, .05),
+            q975 = quantile(value, .975)) %>% 
+  ggplot(aes(x = median, y = campaign)) + 
+  geom_errorbarh(aes(xmin = q25, xmax = q75), height = 0, size = 2) +
+  geom_errorbarh(aes(xmin = q05, xmax = q975), height = .1) +
+  geom_point(aes(color = campaign), size = 4) + 
+  theme(legend.position = 'none') + 
+  xlab('Estimate') + 
+  ylab(NULL)
+  
 
 # chart fit ----
 fun_gg_chart_fit(mod_list_2)
