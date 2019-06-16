@@ -1,0 +1,18 @@
+
+
+## Recruitment Candidate Exercise App Documentation
+
+----
+
+
+
+### Structure
+
+- `helper.R`
+- `app.R`
+- `server.R`
+- `ui.R`
+- `documentation.Rmd`
+- `/data/data.csv`
+
+
